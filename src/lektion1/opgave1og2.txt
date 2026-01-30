@@ -1,0 +1,10 @@
+Opgave 1.
+Del 1 - O(n^2)
+Del 2 - O(n^3)
+
+Opgave 2.
+Del 1 isStringHello - O(c)
+Del 2 checkString - O(n)
+Del 3 methodA - O(n^2)
+Del 4 privateMethodA - O(n)
+Del 5 methodB - O(n^2)

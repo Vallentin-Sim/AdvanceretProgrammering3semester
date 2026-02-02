@@ -18,7 +18,7 @@ public class Opgave6 {
      * På denne måde bliver arrayed sorteret i rækkefølgen S, G, R uden at lave en ny array.
      * Eksempel: G R S G G R -> Tæller S=1, G=3 og R=2 -> Skriver
      * S G G G R R på pladsen.
-     * @param belgian_flag sorteret array tilbage
+     * @param belgian_flag gamle array overskrives sorteret.
      */
     public static void belgian_flag(char[] belgian_flag){
         int countS = 0;

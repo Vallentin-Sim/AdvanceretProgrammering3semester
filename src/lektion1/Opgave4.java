@@ -9,10 +9,8 @@ public class Opgave4 {
         int[] fibTal = new int[n];
         for (int i = 0; i < n; i++) {
             if (i == 0){
-                fibTal[0] = 0;
+                fibTal[i] = 0;
             } else if (i == 1){
-                fibTal[i] = 1;
-            } else if (i == 2){
                 fibTal[i] = 1;
             } else {
                 fibTal[i] = fibTal[i-1] + fibTal[i-2];

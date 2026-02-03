@@ -9,7 +9,8 @@ public class Opgave5 {
     /**
      * Returns the week number of the week of the year where the vacation should start,
      * if you want the minimum rainfall in the three weeks.
-     * @return
+     * O(n)
+     * @return index value for first given week. -1 if rainfallPrWeek contains less than 3 elements.
      */
 
     public int bestThreeWeeks() {
@@ -34,7 +35,7 @@ public class Opgave5 {
     /**
      * Returns the week number of the week of the year where you want to start the vacation,
      * if you want the minimum rainfall in the "number" of weeks specified in the parameter.
-     *
+     * O(n)
      * @return
      */
 
@@ -64,7 +65,7 @@ public class Opgave5 {
     /**
      * Returns the week number of the first week in which precipitation has been exactly the same
      * for the most consecutive weeks
-     *
+     * O(n)
      * @return
      */
     public int sameRainfall() {

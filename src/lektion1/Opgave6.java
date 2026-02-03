@@ -25,8 +25,9 @@ public class Opgave6 {
         int countG = 0;
         int countR = 0;
 
-        for (int i = 0; i < belgian_flag.length; i++) {
-            char mapped = charConverterHelperMethod(belgian_flag[i]);
+        // Iterate over array and count according to given value S, G or R.
+        for (char c : belgian_flag) {
+            char mapped = charConverterHelperMethod(c);
             if (mapped == 1) {
                 countS++;
             } else if (mapped == 2) {
@@ -36,6 +37,7 @@ public class Opgave6 {
             }
         }
 
+        // Insert new values into array sorted by S, G and R
         int index = 0;
         for (int i = 0; i < countS; i++) {
             belgian_flag[index++] = 'S';

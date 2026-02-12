@@ -1,0 +1,8 @@
+I denne lektion bruges BST filen igen fra tidligere lektion.
+
+In this lesson the previous BST file is used again from lektion2binarytrees.
+
+Opgave 1, Hvordan ser træet ud ud fra den givne rækkefølge:
+
+Første indsættelse bliver root, derefter følges højre og venstre logik.
+Ikke meget andet at sige om det.

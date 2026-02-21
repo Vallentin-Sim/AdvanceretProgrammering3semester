@@ -305,8 +305,7 @@ public class BST<E extends Comparable<E>> {
         if (root == null) return 0;
 
         if (root.element.compareTo(element) > 0) {
-            return 1 + greaterThanCount(element, root.left)
-                    + greaterThanCount(element, root.right);
+            return 1 + greaterThanCount(element, root.left) + greaterThanCount(element, root.right);
         }
 
         return greaterThanCount(element, root.right);

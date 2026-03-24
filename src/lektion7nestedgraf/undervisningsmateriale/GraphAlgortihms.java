@@ -1,4 +1,4 @@
-package grafalgoritmer;
+package lektion7nestedgraf.undervisningsmateriale;
 
 import java.util.List;
 import java.util.Map;

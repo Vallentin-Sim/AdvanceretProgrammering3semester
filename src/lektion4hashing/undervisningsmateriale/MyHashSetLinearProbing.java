@@ -32,13 +32,26 @@ public class MyHashSetLinearProbing<E> implements MySet<E> {
     /** Return true if the element is in the set */
     public boolean contains(E e) {
         int bucketIndex = hash(e.hashCode());
-        return table[bucketIndex] == e;
+        boolean contains = false;
+        int count = 0;
+        if (count < size) {
+            while (table[bucketIndex] != null) {
+                if (table[bucketIndex].equals(e)) {
+                    contains = true;
+                    break;
+                } else {
+                    bucketIndex = (bucketIndex + 1) % table.length;
+                }
+                count++;
+            }
+        }
+        return contains;
     }
 
     @Override
     /** Remove all elements from this set */
     public void clear() {
-        Arrays.fill(table, (E)new Object());
+        Arrays.fill(table, new Object());
         size = 0;
     }
 

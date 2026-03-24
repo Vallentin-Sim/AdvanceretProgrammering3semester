@@ -4,7 +4,16 @@ import java.util.Arrays;
 
 public class MyHashSetChaining<E> implements MySet<E> {
     // The number of elements in the set
-    private int size = 0;
+    private int size;
+    // LOAD Faktor
+    /**
+    Loadfaktoren beregnes som antallet af elementer divideret med antallet af buckets i hash-tabellen.
+    Den viser altså, hvor fyldt tabellen er.
+    Hvis loadfaktoren bliver for høj, vil der opstå flere kollisioner, og kæderne i separate chaining bliver længere, hvilket gør operationer som add, contains og remove langsommere.
+    Derfor vælger man ofte en grænse på 0.75, fordi den giver en god balance mellem effektiv søgetid og et rimeligt pladsforbrug.
+    Når loadfaktoren overstiger denne grænse, udføres rehashing, så elementerne fordeles på en større tabel.
+     */
+    private static final double maxLoadFaktor = 0.75;
 
     // Hash table is an array with each cell that is a linked list
     private Node<E>[] table;
@@ -64,7 +73,25 @@ public class MyHashSetChaining<E> implements MySet<E> {
             table[bucketIndex] = newNode;
             size++;
         }
+
+        double loadFaktor = (double) size / maxLoadFaktor;
+        if (loadFaktor > maxLoadFaktor) {
+            rehash();
+        }
         return !found;
+    }
+
+    private void rehash() {
+        Node<E>[] oldTable = table;
+        table = (Node<E>[]) new Node[oldTable.length * 2];
+        size = 0;
+        for (Node<E> bucket : oldTable) {
+            Node<E> current = bucket;
+            while (current != null) {
+                add(current.data);
+                current = current.next;
+            }
+        }
     }
 
     @Override /** Remove the element from the set */
@@ -113,6 +140,7 @@ public class MyHashSetChaining<E> implements MySet<E> {
             }
         }
     }
+
 
    private class Node<E>{
         public E data;

@@ -1,0 +1,155 @@
+=========================================================
+  OPSUMMERING — OPGAVE 5
+  Adapter Pattern + Template Method Pattern
+=========================================================
+
+
+---------------------------------------------------------
+  KLASSEDIAGRAM
+---------------------------------------------------------
+
+  «interface»
+  Sequence<E>
+  ─────────────────
+  + add(E)
+  + addAll(Sequence<E>)
+  + head() : E
+  + tail()
+  + isEmpty() : boolean
+  + iterator() : Iterator<E>
+          ▲
+          │ implements
+          │
+  ListSequence<E>          wraps          LinkedList<E>
+  ─────────────────  ────────────────►  ─────────────────
+  - list: LinkedList                    .add()
+                                        .getFirst()
+                                        .removeFirst()
+                                        .isEmpty()
+                                        .iterator()
+
+
+  «abstract»
+  MergeTemplate<E>
+  ─────────────────────────────────────────
+  + merge(s1, s2, g) : Sequence<E>   <- final (template method)
+  # move1(s)                         <- tom default
+  # move2(s)                         <- tom default
+  # move3(s1, s2)                    <- tom default
+  # moveTail1(s)                     <- tom default
+  # movetail2(s)                     <- tom default
+          ▲                ▲
+          │                │
+     FindAll<E>        Combine<E>
+     (alle elementer)  (fælles elementer)
+
+
+---------------------------------------------------------
+  ADAPTER PATTERN — ListSequence
+---------------------------------------------------------
+
+  Problemet:
+    Opgaven kræver et Sequence-interface, men Java's
+    standardbibliotek har LinkedList — ikke Sequence.
+    Vi kan ikke ændre LinkedList.
+
+  Løsningen:
+    ListSequence er en wrapper der ejer en LinkedList
+    internt og oversætter hvert kald:
+
+    Klient kalder:        ListSequence oversætter til:
+    ─────────────────     ──────────────────────────────
+    seq.head()       ->   list.getFirst()
+    seq.tail()       ->   list.removeFirst()
+    seq.add(obj)     ->   list.add(obj)
+    seq.isEmpty()    ->   list.isEmpty()
+    seq.iterator()   ->   list.iterator()
+    seq.addAll(s)    ->   loop med iterator
+                          (ingen direkte LinkedList-modstykke)
+
+  Nøglepointen:
+    Klienten (App, MergeTemplate) kender kun til
+    Sequence-interfacet. Den ved aldrig at der er en
+    LinkedList indeni. Det er Adapters formål — skjule
+    implementeringen bag en kontrakt.
+
+
+---------------------------------------------------------
+  TEMPLATE METHOD PATTERN — MergeTemplate
+---------------------------------------------------------
+
+  Problemet:
+    Flettealgoritmen (while-løkken der sammenligner hoveder)
+    er altid den samme. Men hvad der SKER med elementerne
+    varierer: skal vi beholde alle? Kun fælles? Andet?
+
+  Løsningen:
+    merge() er final og indeholder den faste algoritme.
+    De 5 primitive metoder er variationspunkterne —
+    subklasser overskriver kun dem de har brug for.
+
+    merge() — LÅST algoritme:
+    ┌──────────────────────────────────────────────────┐
+    │ while (s1 og s2 ikke tomme):                     │
+    │   if s1.head < s2.head  ->  move1(s1)  <- var.  │
+    │   if s1.head > s2.head  ->  move2(s2)  <- var.  │
+    │   if s1.head == s2.head ->  move3(s1,s2)<- var. │
+    │ if s1 har rester        ->  moveTail1(s1)<- var.│
+    │ if s2 har rester        ->  movetail2(s2)<- var.│
+    └──────────────────────────────────────────────────┘
+
+  De to subklasser — hvad de gør ved hvert tilfælde:
+
+             | move1        | move2        | move3          | moveTail
+  ───────────|──────────────|──────────────|────────────────|──────────────
+  FindAll    | Tag s1 -> g  | Tag s2 -> g  | Tag begge -> g | Tøm resten
+  Combine    | s.tail()     | s.tail()     | Tag ét -> g,   | Gør ingenting
+             | (smid væk)   | (smid væk)   | smid begge væk |
+
+  Vigtig detalje ved Combine's move1/move2:
+    Default-implementeringerne i MergeTemplate er TOMME.
+    Det er korrekt for moveTail, men for move1/move2 i
+    Combine SKAL vi kalde s.tail() — ellers bliver
+    while-løkken ved med at tjekke det samme hoved
+    i al evighed (uendelig løkke).
+
+
+---------------------------------------------------------
+  HVORDAN DE TO MØNSTRE ARBEJDER SAMMEN
+---------------------------------------------------------
+
+  App
+   │
+   ├─ opretter ListSequence<Team>   <- Adapter giver os Sequence-interfacet
+   │
+   └─ kalder merger.merge(s1, s2, g)
+          │
+          └─ MergeTemplate.merge()  <- Template Method styrer algoritmen
+                 │
+                 ├─ FindAll: move3 tilføjer begge ens elementer
+                 └─ Combine: move3 tilføjer kun ét,
+                             move1/move2 smider unikke væk
+
+  Det smarte:
+    MergeTemplate ved ingenting om ListSequence — den bruger
+    kun Sequence-interfacet. Og ListSequence ved ingenting
+    om fletning. De to mønstre er fuldstændig uafhængige
+    af hinanden.
+
+
+---------------------------------------------------------
+  BUGFIX I Team.compareTo
+---------------------------------------------------------
+
+  // Før — sammenlignede name med sig selv, returnerede altid 0
+  comp = name.compareTo(name);
+
+  // Efter — sammenligner med det andet holds navn
+  comp = name.compareTo(o.getName());
+
+  Uden denne fix ville sorteringen indenfor samme ugedag
+  være forkert, og fletningen ville producere forkert
+  rækkefølge.
+
+
+=========================================================

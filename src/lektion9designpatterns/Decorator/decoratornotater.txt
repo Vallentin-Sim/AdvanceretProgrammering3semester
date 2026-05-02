@@ -1,0 +1,172 @@
+=========================================================
+  DECORATOR PATTERN — FORKLARING OG STRUKTUR
+=========================================================
+
+
+---------------------------------------------------------
+  HVAD ER DECORATOR?
+---------------------------------------------------------
+
+  Decorator-mønsteret tilføjer dynamisk ny adfærd til et
+  objekt ved at "pakke" det ind i et andet objekt af samme
+  type. Man kan stable flere dekoratorer oven på hinanden
+  ligesom løg-lag — hvert lag tilføjer noget, og det
+  inderste lag er det originale objekt.
+
+  Det er et alternativ til arv: i stedet for at lave
+  subklasser for alle kombinationer (TurboCheesePizza,
+  TurboMetallakCheesePizza osv.) kan man kombinere
+  dekoratorer frit ved kørselstid.
+
+
+---------------------------------------------------------
+  STRUKTUR
+---------------------------------------------------------
+
+  «abstract»
+  SuperCar
+  ─────────────────────────
+  + cost() [abstract]
+  + getDescription() [abstract]
+          ▲                  ▲
+          │ extends          │ extends
+          │                  │
+  Focus / Puma / Kuga    «abstract» Decorator
+  (konkrete komponenter)  ─────────────────────────
+                          # wrappedCar: SuperCar    <- NØGLEN
+                          + Decorator(SuperCar)
+                          + cost()  →  wrappedCar.cost()
+                          + getDescription()  →  wrappedCar.getDescription()
+                                  ▲
+                                  │ extends
+                          ┌───────┼───────────┐
+                          │       │           │
+                        Turbo  Metallak  Bakkecensor  Laederbetraek
+                       +10000   +5000    +3000         +2000
+
+
+---------------------------------------------------------
+  NØGLEPRINCIPPET — WRAPPING
+---------------------------------------------------------
+
+  Dekoratoren ER en SuperCar (arv) OG HAR en SuperCar
+  (komposition). Det er dette dobbelte forhold der gør
+  at dekoratorer kan stables:
+
+    Decorator extends SuperCar       <- samme type som det den wrapper
+    protected SuperCar wrappedCar    <- reference til det den wrapper
+
+  KODE (Decorator.java):
+    public abstract class Decorator extends SuperCar {
+        protected SuperCar wrappedCar;
+
+        public Decorator(SuperCar wrappedCar) {
+            super(wrappedCar.getModel(), wrappedCar.getPrice());
+            this.wrappedCar = wrappedCar;
+        }
+
+        public double cost() {
+            return wrappedCar.cost();       // delegér til indre lag
+        }
+
+        public String getDescription() {
+            return wrappedCar.getDescription();  // delegér til indre lag
+        }
+    }
+
+  KODE (Turbo.java — konkret dekorator):
+    public class Turbo extends Decorator {
+        public Turbo(SuperCar wrappedCar) {
+            super(wrappedCar);
+        }
+
+        public double cost() {
+            return super.cost() + 10000;    // indre bils pris + Turbo-tillæg
+        }
+
+        public String getDescription() {
+            return super.getDescription() + " + Turbo";  // kæder beskrivelsen
+        }
+    }
+
+
+---------------------------------------------------------
+  KÆDEN AF KALD (call chain)
+---------------------------------------------------------
+
+  Når du bygger en bil med dekoratorer:
+
+    SuperCar bil = new Focus("ST", 200000);
+    bil = new Metallak(bil);
+    bil = new Turbo(bil);
+    bil = new Bakkecensor(bil);
+
+  Er strukturen i hukommelsen:
+
+    Bakkecensor
+      └── wrappedCar: Turbo
+            └── wrappedCar: Metallak
+                  └── wrappedCar: Focus  (det originale objekt)
+
+  Når du kalder bil.cost() rulles kæden ud indefra:
+
+    Bakkecensor.cost()
+      → super.cost() + 3000
+        → Turbo.cost() + 3000
+          → super.cost() + 10000
+            → Metallak.cost() + 10000
+              → super.cost() + 5000
+                → Focus.cost() + 5000
+                  → 200000
+    = 200000 + 5000 + 10000 + 3000 = 218000 kr
+
+  Samme princip for getDescription():
+    → "Focus ST - 200000.0 kr + Metallak + Turbo + Bakkecensor"
+
+
+---------------------------------------------------------
+  HVAD DER IKKE ER DECORATOR (almindelig fejl)
+---------------------------------------------------------
+
+  En liste af tilføjelser på selve objektet er IKKE Decorator:
+
+    // FORKERT — dette er ikke decorator, men aggregation/liste
+    car.addDecorator(new Turbo("ST", 10000));
+    car.addDecorator(new Metallak("ST", 5000));
+
+  Problemet:
+    - Dekoratoren wrapper ikke bilen — den har ingen reference
+      til den bil den skal "ligge oven på"
+    - Dekoratorer er separate objekter med eget model/pris
+      i stedet for at arve fra det indre objekt
+    - Kæden eksisterer ikke — man kan ikke stable dekoratorer
+      oven på hinanden
+
+  Korrekt Decorator har:
+    1. Dekoratoren tager en SuperCar i sin constructor
+    2. Den gemmer den som wrappedCar
+    3. cost()/getDescription() delegerer til wrappedCar
+       og tilføjer oven på
+
+
+---------------------------------------------------------
+  FORDELE VED DECORATOR
+---------------------------------------------------------
+
+  Fleksibilitet:
+    new Turbo(new Metallak(new Focus("ST", 200000)))
+    new Bakkecensor(new Focus("Active", 180000))
+    new Turbo(new Turbo(new Kuga("X", 250000)))  // dobbelt turbo!
+
+    Alle kombinationer er mulige uden nye subklasser.
+
+  Åben/Lukket-princippet:
+    Ny tilvalg = ny dekorator-klasse.
+    Eksisterende klasser ændres ikke.
+
+  Kørselstid vs. kompileringstid:
+    I modsætning til arv (som er fast ved kompilering)
+    kan Decorator-kombinationer bestemmes mens programmet kører.
+
+
+=========================================================

@@ -1,0 +1,185 @@
+=========================================================
+  FACTORY PATTERNS — OVERSIGT OG FORKLARING
+  Simple Factory / Singleton Factory / Factory Method
+=========================================================
+
+
+---------------------------------------------------------
+  HVAD ER ET FACTORY PATTERN?
+---------------------------------------------------------
+
+  Et factory pattern handler om at adskille OPRETTELSEN
+  af objekter fra brugen af dem. I stedet for at skrive
+  "new CheesePizza()" direkte i koden, delegerer vi
+  oprettelsen til et andet sted.
+
+  Fordelen: klienten (den der bestiller en pizza) behøver
+  ikke vide hvilken konkret klasse den får — den ved kun
+  at den får et Pizza-objekt.
+
+
+---------------------------------------------------------
+  1. SIMPLE FACTORY  (ikke officielt et GoF pattern)
+---------------------------------------------------------
+
+  IDEEN:
+    En separat klasse har ansvar for at oprette objekter.
+    Klienten kalder factory-klassen med en parameter
+    og får et objekt tilbage.
+
+  STRUKTUR:
+    Klient  ──calls──►  SimpleFactory.createPizza(type, style)
+                              │
+                    ┌─────────┼──────────┐
+                    ▼         ▼          ▼
+               CheesePizza  GreekPizza  PepperoniPizza
+
+  KENDETEGN:
+    - Én klasse med al oprettelseslogik (if-else kæde)
+    - Stilvalg sendes som STRING-PARAMETER ("NY", "Chicago")
+    - Nemt at forstå, men svært at udvide uden at ændre
+      factory-klassen
+
+  EKSEMPEL (opgave05 / opgave06 original):
+    factory.createPizza("cheese", "NY");
+    factory.createPizza("pepperoni", "Chicago");
+
+
+---------------------------------------------------------
+  2. SINGLETON FACTORY  (Simple Factory + Singleton)
+---------------------------------------------------------
+
+  IDEEN:
+    Som Simple Factory, men factory-klassen er en Singleton
+    — der eksisterer KUN ÉN instans af fabrikken i hele
+    programmet. Adgang sker via getInstance().
+
+  STRUKTUR:
+    Klient  ──►  PizzaFactory.getInstance().createPizza(type)
+                      │
+                  [kun én instans]
+                      │
+              if/else oprettelseslogik
+
+  KENDETEGN:
+    - private constructor: forhindrer "new PizzaFactory()"
+    - static getInstance(): returnerer altid samme objekt
+    - Første kald opretter instansen, alle efterfølgende
+      genbruger den
+    - Nyttigt når factory-klassen er dyr at oprette eller
+      skal deles globalt
+
+  KODE (PizzaFactory.java):
+    private static PizzaFactory instance;
+
+    private PizzaFactory() {}           // ingen kan lave ny instans
+
+    public static PizzaFactory getInstance() {
+        if (instance == null) {
+            instance = new PizzaFactory();  // kun første gang
+        }
+        return instance;
+    }
+
+  FORSKEL FRA SIMPLE FACTORY:
+    Simple Factory:   new SimplePizzaFactory() — mange instanser mulige
+    Singleton Factory: PizzaFactory.getInstance() — altid samme objekt
+
+
+---------------------------------------------------------
+  3. FACTORY METHOD  (officielt GoF design pattern)
+---------------------------------------------------------
+
+  IDEEN:
+    I stedet for at samle al oprettelseslogik i én klasse,
+    definerer vi en ABSTRAKT metode i en basisklasse.
+    Subklasser implementerer metoden og bestemmer selv
+    hvilke konkrete objekter de opretter.
+
+    Stilvalget sker ved at VÆLGE SUBKLASSE — ikke ved
+    at sende en parameter.
+
+  STRUKTUR:
+    «abstract»
+    Pizzaria
+    ──────────────────────────────────
+    + orderPizza(type) [final]         <- template method
+        └── kalder createPizza(type)
+    # createPizza(type) [abstract]     <- factory method
+            ▲                ▲
+            │                │
+      NYPizzaStore    ChicagoPizzaStore
+      (implementerer  (implementerer
+       for NY-stil)    for Chicago-stil)
+
+  KENDETEGN:
+    - Basisklassen (Creator) er abstrakt
+    - orderPizza() er final — algoritmen er låst
+    - createPizza() er abstrakt — subklassen bestemmer
+    - Ny stil = ny subklasse, ingen ændring i basisklassen
+    - Basisklassen kender IKKE de konkrete pizza-klasser
+
+  KODE (Pizzaria.java):
+    public abstract class Pizzaria {
+        public final Pizza orderPizza(String type) {
+            Pizza pizza = createPizza(type);  // factory method
+            pizza.prepare();
+            pizza.bake();
+            ...
+        }
+        protected abstract Pizza createPizza(String type);
+    }
+
+  KODE (NYPizzaStore.java):
+    public class NYPizzaStore extends Pizzaria {
+        protected Pizza createPizza(String type) {
+            if (type.equals("cheese")) return new NYStyleCheesePizza();
+            ...
+        }
+    }
+
+  FORSKEL FRA SIMPLE FACTORY:
+    Simple Factory:   factory.createPizza("cheese", "NY")
+                      — stil som parameter
+    Factory Method:   new NYPizzaStore().orderPizza("cheese")
+                      — stil som klassetype
+
+
+---------------------------------------------------------
+  SAMMENLIGNING AF DE TRE MØNSTRE
+---------------------------------------------------------
+
+               | Stil/type valg   | Fabrik-klasser   | Udvidelse
+  ─────────────|──────────────────|──────────────────|──────────────
+  Simple       | parameter        | én klasse        | ændr factory
+  Factory      | ("NY","cheese")  |                  | klassen
+  ─────────────|──────────────────|──────────────────|──────────────
+  Singleton    | parameter        | én klasse,       | ændr factory
+  Factory      | ("NY","cheese")  | kun én instans   | klassen
+  ─────────────|──────────────────|──────────────────|──────────────
+  Factory      | klassetype       | abstrakt basis + | tilføj ny
+  Method       | new NYStore()    | konkrete sub.    | subklasse
+
+
+---------------------------------------------------------
+  HVORNÅR BRUGER MAN HVAD?
+---------------------------------------------------------
+
+  Simple Factory:
+    Enkle programmer med få typer der sjældent ændres.
+    Hurtig løsning, let at forstå.
+
+  Singleton Factory:
+    Når fabrikken skal deles globalt og kun én instans
+    giver mening (f.eks. databaseforbindelses-pool,
+    konfigurations-objekt).
+
+  Factory Method:
+    Når der er flere varianter af "det samme produkt"
+    (NY vs. Chicago, Windows vs. Mac UI-elementer) og
+    du vil tilføje nye varianter uden at ændre eksisterende
+    kode. Følger Open/Closed-princippet: åben for udvidelse,
+    lukket for ændring.
+
+
+=========================================================

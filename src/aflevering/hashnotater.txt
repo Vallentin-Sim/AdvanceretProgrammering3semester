@@ -1,0 +1,236 @@
+=========================================================
+  DICTIONARY MED DOUBLE HASHING — FORKLARING
+=========================================================
+
+
+---------------------------------------------------------
+  HVAD ER ET DICTIONARY (hash-tabel)?
+---------------------------------------------------------
+
+  Et dictionary gemmer (nøgle, værdi)-par og giver hurtig
+  adgang via nøglen. I stedet for at søge lineært (O(n))
+  beregner vi en INDEX direkte fra nøglen via en hashfunktion.
+  I gennemsnit: O(1) for get, put og remove.
+
+  Eksempel:
+    put(4371, "A")  →  beregn index for 4371  →  indsæt på den plads
+    get(4371)       →  beregn samme index      →  returner "A"
+
+
+---------------------------------------------------------
+  DOUBLE HASHING — KOLLISIONSHÅNDTERING
+---------------------------------------------------------
+
+  Kolllision: to nøgler beregner samme index.
+  Double hashing løser det med to hashfunktioner:
+
+  Primær hashfunktion:
+    h(key) = key % table.length
+    Bestemmer startpladsen.
+
+  Sekundær hashfunktion:
+    h'(key) = 7 - (key % 7)
+    Bestemmer skridtstørrelsen ved kollision.
+
+  Kombination (probe i):
+    index(key, i) = (h(key) + i * h'(key)) % table.length
+
+    i=0: prøv h(key)
+    i=1: prøv h(key) + 1 * h'(key)
+    i=2: prøv h(key) + 2 * h'(key)
+    osv.
+
+  Fordel ved double hashing vs. linear probing:
+    - Skridtstørrelsen varierer per nøgle
+    - Undgår "primary clustering" (klumper af fyldte pladser)
+    - Bedre fordeling i tabellen
+
+
+---------------------------------------------------------
+  DELETED-MARKØREN — HVORFOR DEN ER NØDVENDIG
+---------------------------------------------------------
+
+  Problem: Hvad sker der hvis vi bare sætter null ved remove?
+
+    Tabel: [null, A, DELETED-slot, B, null]
+
+    Søgekæde for B: start → A → tom slot → STOP
+
+    Hvis vi erstatter DELETED-slot med null, stopper søgningen
+    for tidligt — B bliver aldrig fundet, selvom den er der.
+
+  Løsning: DELETED-markøren
+
+    Tabel: [null, A, DELETED, B, null]
+
+    Søgekæde for B: start → A → DELETED (fortsæt!) → B ✓
+
+  DELETED angiver: "her lå engang noget — fortsæt søgningen".
+  null angiver:    "her har aldrig ligget noget — stop."
+
+  KODE:
+    private final Entry<K, V> DELETED = new Entry<>(null, null);
+    // Sammenligning med reference-lighed: entry == DELETED
+
+
+---------------------------------------------------------
+  LOAD FACTOR OG REHASHING
+---------------------------------------------------------
+
+  Load factor = antal elementer / tabelstørrelse
+
+  Når load factor overstiger 0.5 (halvt fyldt), rehashes:
+    1. Gem den gamle tabel
+    2. Lav en ny tabel med dobbelt størrelse
+    3. Genindsæt alle levende elementer (ikke DELETED)
+
+  Hvorfor 0.5?
+    Double hashing fungerer dårligt ved høj belægning.
+    Med load factor under 0.5 holdes kollisionerne lave
+    og ydelsen nær O(1) gennemsnit.
+
+  KODE (rehash):
+    table = new Entry[oldTable.length * 2];
+    for (Entry<K,V> entry : oldTable) {
+        if (entry != null && entry != DELETED) {
+            insertEntry(entry.getKey(), entry.getValue());
+        }
+    }
+
+
+---------------------------------------------------------
+  KLASSENS METODER OG KOMPLEKSITET
+---------------------------------------------------------
+
+  get(key):
+    Probe-gennemløb indtil nøglen eller null findes.
+    Gennemsnit O(1), worst-case O(n).
+
+  put(key, value):
+    Tjekker om nøglen allerede findes (opdatering).
+    Rehash hvis load factor overskrides.
+    Finder første ledige eller DELETED-plads.
+    Gennemsnit O(1), worst-case O(n).
+
+  remove(key):
+    Finder pladsen via probe-kæde.
+    Erstatter entry med DELETED-markøren.
+    Dekrementerer size.
+    Gennemsnit O(1), worst-case O(n).
+
+  Alle worst-case O(n) skyldes at hele tabellen i teorien
+  kan probes ved fuld kollionstæt belægning.
+
+
+---------------------------------------------------------
+  ENTRY — INDRE KLASSE
+---------------------------------------------------------
+
+  Entry<K, V> er en simpel container for ét (nøgle, værdi)-par.
+  Den er static nested class (ikke afhængig af ydre instans).
+  DELETED-markøren er en Entry med null-nøgle og null-værdi —
+  den bruges kun som sentinelværdi via reference-sammenligning.
+
+
+=========================================================
+  RETTELSER OG FORBEDRINGER
+=========================================================
+
+
+---------------------------------------------------------
+  RETTELSE 1: K extends Number — typebegrænsning
+---------------------------------------------------------
+
+  PROBLEM:
+    Klassen var erklæret som DictionaryDoubleHashing<K, V>
+    uden begrænsning på K. Men keyValue() kaster en undtagelse
+    hvis K ikke er Number. Det betyder at fejlen først opdages
+    ved kørselstid — ikke ved kompilering.
+
+    // Dette kompilerede uden fejl, men kastede exception ved kørsel:
+    DictionaryDoubleHashing<String, String> d = new DictionaryDoubleHashing<>();
+    d.put("hello", "world");  // IllegalArgumentException — for sent!
+
+  RETTELSE:
+    public class DictionaryDoubleHashing<K extends Number, V>
+
+    Nu afviser compileren DictionaryDoubleHashing<String, String>
+    allerede inden programmet kører. Fejlen fanges tidligst muligt.
+
+
+---------------------------------------------------------
+  RETTELSE 2: get() brugte nu findIndex() — fjerner duplikering
+---------------------------------------------------------
+
+  PROBLEM:
+    get() og findIndex() lavede nøjagtigt samme probe-loop.
+    Ændringer i probe-logikken skulle vedligeholdes to steder.
+
+  FØR:
+    public V get(K key) {
+        for (int probe = 0; probe < table.length; probe++) {
+            int index = indexFor(key, probe);
+            Entry<K,V> entry = table[index];
+            if (entry == null) return null;
+            if (entry != DELETED && entry.getKey().equals(key))
+                return entry.getValue();
+        }
+        return null;
+    }
+
+  EFTER:
+    public V get(K key) {
+        if (key == null) throw new IllegalArgumentException("Key must not be null");
+        int index = findIndex(key);
+        return index >= 0 ? table[index].getValue() : null;
+    }
+
+  Al probe-logik er nu samlet ét sted: findIndex().
+
+
+---------------------------------------------------------
+  RETTELSE 3: size = oldSize fjernet fra rehash()
+---------------------------------------------------------
+
+  PROBLEM:
+    rehash() satte size = 0, kaldte insertEntry() (som
+    inkrementerer size) og satte derefter size = oldSize.
+    Den sidste linje var overflødig — size var allerede
+    lig oldSize efter løkken, fordi præcis oldSize levende
+    entries blev genindssat. Linjen var ikke forkert, men
+    forvirrende at læse.
+
+  FØR:
+    size = 0;
+    for (...) { insertEntry(...); }  // size tælles op til oldSize
+    size = oldSize;                  // ← overflødig
+
+  EFTER:
+    size = 0;
+    for (...) { insertEntry(...); }  // size er korrekt efter løkke
+    // size = oldSize fjernet
+
+
+---------------------------------------------------------
+  RETTELSE 4: Testklassen — tre forbedringer
+---------------------------------------------------------
+
+  A) Typo rettet:
+    dictionayTest()  →  dictionaryTest()
+
+  B) assertNull i stedet for assertEquals(null, ...):
+    assertEquals(null, dic.get(4199));  // virker men ikke idiomatisk
+    assertNull(dic.get(4199));          // korrekt JUnit-stil
+
+  C) Opdelt i separate @Test-metoder med @BeforeEach:
+
+  PROBLEM med én stor testmetode:
+    Hvis én assertion fejler, springes alle efterfølgende over.
+    Man ved ikke om de ville have fejlet. Testene er ikke isolerede.
+
+  LØSNING: @BeforeEach setup + separate metoder.
+    Hver test starter fra samme kendte starttilstand.
+    En fejl i én test påvirker ikke de andre.
+
+
+=========================================================

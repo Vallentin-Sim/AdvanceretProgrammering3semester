@@ -1,6 +1,8 @@
 package aflevering;
 
-public class DictionaryDoubleHashing<K, V> implements Dictionary<K, V> {
+// K extends Number: sikrer at compileren afviser ikke-numeriske nøgler.
+// keyValue() kræver Number — uden bound ville fejlen først opstå ved kørselstid.
+public class DictionaryDoubleHashing<K extends Number, V> implements Dictionary<K, V> {
     private static final double MAX_LOAD_FACTOR = 0.5;
 
     private Entry<K, V>[] table;
@@ -22,10 +24,7 @@ public class DictionaryDoubleHashing<K, V> implements Dictionary<K, V> {
     }
 
     private int keyValue(K key) {
-        if (key instanceof Number number) {
-            return number.intValue();
-        }
-        throw new IllegalArgumentException("Denne implementation forventer numeriske nøgler");
+        return key.intValue();
     }
 
     private int primaryHash(K key) {
@@ -50,7 +49,6 @@ public class DictionaryDoubleHashing<K, V> implements Dictionary<K, V> {
     // O(N)
     private void rehash() {
         Entry<K, V>[] oldTable = table;
-        int oldSize = size;
 
         table = new Entry[oldTable.length * 2];
         size = 0;
@@ -60,8 +58,7 @@ public class DictionaryDoubleHashing<K, V> implements Dictionary<K, V> {
                 insertEntry(entry.getKey(), entry.getValue());
             }
         }
-
-        size = oldSize;
+        // size = oldSize fjernet — insertEntry() tæller korrekt op under løkken
     }
 
     private void insertEntry(K key, V value) {
@@ -94,37 +91,21 @@ public class DictionaryDoubleHashing<K, V> implements Dictionary<K, V> {
         return -1;
     }
 
-    /**
-     * Tidskompleksitet: O(n)
-     * @param key
-     *            nøglen elementet skal findes til
-     * @return
-     */
+    // O(n) worst-case, O(1) gennemsnit
     @Override
     public V get(K key) {
         if (key == null) {
             throw new IllegalArgumentException("Key must not be null");
         }
-
-        for (int probe = 0; probe < table.length; probe++) {
-            int index = indexFor(key, probe);
-            Entry<K, V> entry = table[index];
-
-            if (entry == null) {
-                // Null betyder, at noeglen ikke kan ligge laengere henne i denne soegekaede.
-                return null;
-            }
-            if (entry != DELETED && entry.getKey().equals(key)) {
-                return entry.getValue();
-            }
-        }
-        return null;
+        int index = findIndex(key);
+        return index >= 0 ? table[index].getValue() : null;
     }
 
     @Override
     public boolean isEmpty() {
         return size == 0;
     }
+
     // O(N)
     @Override
     public V put(K key, V value) {
@@ -171,7 +152,7 @@ public class DictionaryDoubleHashing<K, V> implements Dictionary<K, V> {
         throw new IllegalStateException("Dictionary is full");
     }
 
-    // Store O notation (Woawie) O(n)
+    // O(N)
     @Override
     public V remove(K key) {
         if (key == null) {
